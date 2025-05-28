@@ -1,7 +1,9 @@
+#include <stdio.h>
+#include "keyValStore.h"
+
 int main(void) {
     char result[256];
 
-    // GET key1, key noch nicht vorhanden
     if (get("key1", result) == 0)
         printf("GET:key1:%s\n", result);
     else

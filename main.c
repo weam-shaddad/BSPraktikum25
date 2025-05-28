@@ -9,9 +9,7 @@
 #define PORT 5678
 #define BUFFER_SIZE 1024
 
-// Funktion, die einen Client bedient und die Befehle verarbeitet.
 void handleClient(int client_fd) {
-    // Begrüßungsnachricht an den Client senden
     char welcome_message[] = "Mit Server verbunden!\n";
     send(client_fd, welcome_message, strlen(welcome_message), 0);
 
@@ -20,28 +18,23 @@ void handleClient(int client_fd) {
         int len = recv(client_fd, recvBuf, BUFFER_SIZE - 1, 0);
         if (len <= 0)
             break;
-        recvBuf[len] = '\0';  // String terminieren
+        recvBuf[len] = '\0';
 
-        // Den Empfangspuffer zeilenweise verarbeiten, da mehrere Befehle enthalten sein können.
         char *line = strtok(recvBuf, "\n");
         while (line != NULL) {
-            // Entferne bei Bedarf ein etwaiges '\r' am Ende
             size_t lineLength = strlen(line);
             if (lineLength > 0 && line[lineLength - 1] == '\r')
                 line[lineLength - 1] = '\0';
 
-            // Falls der Client den QUIT-Befehl sendet, beenden wir die Verbindung.
             if (strncmp(line, "QUIT", 4) == 0) {
                 send(client_fd, "Beende Verbindung\n", strlen("Beende Verbindung\n"), 0);
                 return;
             }
 
-            // Erstelle eine Kopie der Zeile, da strtok die Originalzeile verändert.
             char commandCopy[BUFFER_SIZE];
             strncpy(commandCopy, line, BUFFER_SIZE);
             commandCopy[BUFFER_SIZE - 1] = '\0';
 
-            // Tokenisiere die Eingabe (Befehl, Key und evtl. Value)
             char *command = strtok(commandCopy, " ");
             char *key = strtok(NULL, " ");
             char *value = strtok(NULL, " ");
@@ -94,20 +87,17 @@ void handleClient(int client_fd) {
 }
 
 int main() {
-    // Initialisiere den Shared-Memory-Key-Value-Store
     if (initStore() != 0) {
-        fprintf(stderr, "Shared Memory Initialisierung fehlgeschlagen.\n");
+        fprintf(stderr, "Initialisierung des Key–Value Stores fehlgeschlagen.\n");
         exit(EXIT_FAILURE);
     }
 
-    // Erstelle den Socket
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         perror("Socketerstellung fehlgeschlagen");
         exit(EXIT_FAILURE);
     }
 
-    // Konfiguriere die Serveradresse
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(PORT);
@@ -123,22 +113,18 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Verhindere Zombie-Prozesse
     signal(SIGCHLD, SIG_IGN);
     printf("Server läuft auf Port %d...\n", PORT);
 
-    // Endlosschleife: Neue Clientverbindungen annehmen
     while (1) {
         int client_fd = accept(server_fd, NULL, NULL);
         if (client_fd < 0)
             continue;
 
-        // Nachricht im Server-Terminal ausgeben
         printf("Server: Ein Client hat sich verbunden (FD: %d)\n", client_fd);
 
-        // Für jede neue Verbindung wird ein Kindprozess per fork() gestartet.
         if (fork() == 0) {
-            close(server_fd);  // Das Kind benötigt den Server-Socket nicht
+            close(server_fd);
             handleClient(client_fd);
             exit(0);
         }
@@ -147,7 +133,7 @@ int main() {
 
     close(server_fd);
     if (closeStore() != 0) {
-        fprintf(stderr, "Shared Memory Bereinigung fehlgeschlagen.\n");
+        fprintf(stderr, "Bereinigung des Key–Value Stores fehlgeschlagen.\n");
     }
 
     return 0;
