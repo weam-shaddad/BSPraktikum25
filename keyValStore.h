@@ -1,19 +1,20 @@
-//
-// Created by weams on 07/05/2025.
-//
+#ifndef KEYVALSTORE_H
+#define KEYVALSTORE_H
 
-#ifndef KEVVALSTORE_H
-#define KEVVALSTORE_H
+// Initialisiert den Shared Memory Key-Value Store
+int initStore();
 
-#define MAX_STORE_SIZE 100
+// Bereinigt den Shared Memory (munmap und unlink)
+int closeStore();
 
-typedef struct {
-    char key[256];
-    char value[256];
-} KeyValuePair;
+// Legt einen Eintrag an oder aktualisiert ihn
+int put(const char *key, const char *value);
 
-int put(char* key, char* value);
-int get(char* key, char* value);
-int del(char* key);
+// Liest den Wert zu einem gegebenen Schlüssel aus
+// Ist der Schlüssel vorhanden, wird value befüllt und 0 zurückgegeben, sonst -1.
+int get(const char *key, char *value);
 
-#endif //KEVVALSTORE_H
+// Löscht einen Eintrag; bei Erfolg wird 0 und sonst -1 zurückgegeben.
+int del(const char *key);
+
+#endif

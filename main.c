@@ -9,45 +9,49 @@
 #define BUFFER_SIZE 1024
 
 int main() {
-    // Create socket
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0) {
-        perror("Socket creation failed");
+    // Initialisiere den Shared Memory Key-Value Store
+    if (initStore() != 0) {
+        fprintf(stderr, "Shared Memory Initialisierung fehlgeschlagen.\n");
         exit(2);
     }
 
-    // Create address structure
+    // Erstelle den Socket
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("Socketerstellung fehlgeschlagen");
+        exit(2);
+    }
+
+    // Adresse konfigurieren
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(PORT);
     server.sin_addr.s_addr = INADDR_ANY;
 
-    // Bind socket to address
-    int result = bind(server_fd, (struct sockaddr*)&server, sizeof(server));
-    if (result < 0) {
-        perror("Bind failed");
+    // Socket an Adresse binden
+    if (bind(server_fd, (struct sockaddr*)&server, sizeof(server)) < 0) {
+        perror("Bind fehlgeschlagen");
         exit(2);
     }
 
-    // Listen for connections
-    int ret = listen(server_fd, 3);
-    if (ret < 0) {
-        perror("Listen failed");
+    // Auf Verbindungen warten
+    if (listen(server_fd, 3) < 0) {
+        perror("Listen fehlgeschlagen");
         exit(2);
     }
 
-    printf("Server listening on port %d...\n", PORT);
+    printf("Server hört auf Port %d...\n", PORT);
 
-    // Accept a connection
+    // Akzeptiere eine Verbindung
     int client_fd = accept(server_fd, NULL, NULL);
     if (client_fd < 0) {
-        perror("Accept failed");
+        perror("Accept fehlgeschlagen");
         exit(2);
     }
 
-    printf("Client connected!\n");
+    printf("Client verbunden!\n");
 
-    // Buffer für Kommunikation
+    // Buffer für die Kommunikation
     char buffer[BUFFER_SIZE];
     char line[BUFFER_SIZE];
     int line_pos = 0;
@@ -63,18 +67,19 @@ int main() {
         for (int i = 0; i < len; i++) {
             char ch = buffer[i];
 
-            if (ch == '\r') continue;  // Telnet schickt manchmal \r vor \n
+            if (ch == '\r') continue;  // Manche Clients senden \r vor \n
 
             if (ch == '\n') {
-                line[line_pos] = '\0';  // Null-terminieren
+                line[line_pos] = '\0';  // Zeilenende markieren
                 printf("Empfangen: %s\n", line);
 
-                // QUIT erkennen
+                // QUIT-Befehl erkennen
                 if (strncmp(line, "QUIT", 4) == 0) {
                     send(client_fd, "Verbindung wird beendet.\n", 26, 0);
                     goto END;
                 }
 
+                // Befehle zerlegen
                 char* command = strtok(line, " \n");
                 char* key = strtok(NULL, " \n");
                 char* value = strtok(NULL, " \n");
@@ -86,17 +91,20 @@ int main() {
                     if (value == NULL) {
                         send(client_fd, "PUT braucht key + value\n", 25, 0);
                     } else {
-                        put(key, value);
-                        char msg[256];
-                        snprintf(msg, sizeof(msg), "PUT:%s:%s\n", key, value);
-                        send(client_fd, msg, strlen(msg), 0);
+                        if (put(key, value) == 0) {
+                            char msg[256];
+                            snprintf(msg, sizeof(msg), "PUT:%s:%s\n", key, value);
+                            send(client_fd, msg, strlen(msg), 0);
+                        } else {
+                            send(client_fd, "Speicher voll\n", 14, 0);
+                        }
                     }
                 }
                 else if (strcmp(command, "GET") == 0) {
-                    char result[256];
-                    if (get(key, result) == 0) {
+                    char result1[256];
+                    if (get(key, result1) == 0) {
                         char msg[256];
-                        snprintf(msg, sizeof(msg), "GET:%s:%s\n", key, result);
+                        snprintf(msg, sizeof(msg), "GET:%s:%s\n", key, result1);
                         send(client_fd, msg, strlen(msg), 0);
                     } else {
                         char msg[256];
@@ -128,7 +136,14 @@ int main() {
         }
     }
 
-    END:
+END:
     close(client_fd);
     close(server_fd);
+
+    // Bereinige den Shared Memory
+    if (closeStore() != 0) {
+        fprintf(stderr, "Shared Memory Bereinigung fehlgeschlagen.\n");
+    }
+
+    return 0;
 }
