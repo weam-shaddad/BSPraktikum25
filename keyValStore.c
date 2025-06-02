@@ -1,12 +1,65 @@
 #include "keyValStore.h"
 #include <string.h>
 #include <stdio.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
 
 typedef struct {
     char key[MAX_KEY_LEN];
     char value[MAX_VALUE_LEN];
-    int in_use;
-} KeyValue;
+    int in_use; // 0 = frei, 1=Eintrag belegt
+} KeyValue; // Datensatz mit einem Key und dem zugehörigen Value
+
+static KeyValue *store = NULL;
+static int shm_id;
+
+int initStore() {
+   /*
+     1. Identifizieren das Segment:
+        die funktion "shmget()" fordert ein stück von Shared Memory
+
+        id = smget(key, size, flag)
+        als "key": IPC_PRIVATE, damit ein neues Segment erzeugt wird
+        Size: 100–500, für mehrere Clients mit typischen Eingaben
+        flag: IPC_CREAT,  wenn es noch keinen Shared Memory Bereich mit dem Key gibt. wird stattdessen erstellet
+    */
+
+     shm_id = shmget(IPC_PRIVATE, sizeof(KeyValue) * MAX_ENTRIES, IPC_CREAT | 0666);
+     // bei Fehlschlag:
+     if (shm_id < 0) {
+        perror("shmget");
+        return -1;
+    }
+
+    /*
+      2. Attach:
+      die reserviertes Shared Memory Segment in den Adressraum des Prozesses einzuhängen
+      damit das Programm darauf zugreifen kann.
+
+      store = shmat ( id, addr, flag)
+      id= shm_id, also die Segment die wir schon erzeugt haben
+      addr= NULL - Das Betirebssystem entscheidet wo das Segment im Speicher platziert wird
+      flag: 0 -> normal Lese und Schreibzugriff
+      die Compiler sollte diese Speicherbereich wie ein Array von KeyValue behandeln und strukturieren
+     */
+
+    store = (KeyValue *)shmat(shm_id, NULL, 0);
+    // bei Fehlschalag wird "-1" als ungültiger Zeigerwert zurückgegeben
+    if (store == (void *) -1) {
+        perror("shmat");
+        exit(1);
+}
+
+
+
+
+
+}
+
+
+
+/*  Hier ist die Aufgabe vor/ohen Multiclient:
 
 static KeyValue store[MAX_ENTRIES];
 
@@ -63,3 +116,4 @@ int del(const char *key) {
 int closeStore() {
     return 0;
 }
+*/

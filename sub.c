@@ -55,6 +55,16 @@ void start_server() {
     listen(server_fd, 1); // max 1 wartender Client
     printf("Server gestartet. Warte auf Verbindung auf Port %d...\n", PORT);
 
+    /*
+    Wenn wir mit Multiclient server arbeiten möchten:
+     */
+
+    start_multiclient_server(server_fd);
+    close(server_fd);
+
+     /*
+     Wenn wir ohne Multiclient arbeiten:
+      */
     // Client akzeptieren
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len); //
     if (client_fd < 0) {
@@ -144,6 +154,11 @@ void start_server() {
     END:
     close(client_fd);
     close(server_fd);
+
 }
 
-    // Hier später: socket setup, loop, command handling
+void start_multiclient_server(int server_fd) {
+
+    // Hier kommen accept(), fork(), Shared Memory etc. rein
+}
+
