@@ -1,6 +1,9 @@
 #include "keyValStore.h"
+
+#include <io.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
@@ -50,11 +53,12 @@ int initStore() {
         perror("shmat");
         exit(1);
 }
-
-
-
-
-
+    // store ist halt ein Array
+    // Jede Element im store[] Array wird zur Nutzung freigegeben
+    for (int i = 0; i < MAX_ENTRIES; i++) { // durchlaufen die store[] array
+        store[i].in_use = 0; // 0 -> frei
+    }
+    return 0;
 }
 
 

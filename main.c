@@ -9,8 +9,11 @@
 
 
 int main() {
+    if (initStore() != 0) {
+        fprintf(stderr, "Shared Memory Fehler!\n");
+        exit(1);
+    }
 
-    start_server();  // Diese Funktion machst du in sub.c
-
+    start_server(); // Ruft server_fd auf + startet Forks
     return 0;
 }

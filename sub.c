@@ -29,7 +29,7 @@ void start_server() {
 
     // 1.  Anlegen eines Sockets / Socket erstellen
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-                        // Protokoll-Familie: AF_NET, Kommunikationstyp: SOCK_STREAM -> protocol-parameter ist dann 0
+    // Protokoll-Familie: AF_NET, Kommunikationstyp: SOCK_STREAM -> protocol-parameter ist dann 0
     if (server_fd < 0) {
         perror("socket");
         return;
@@ -52,7 +52,7 @@ void start_server() {
     }
 
     // Auf Verbindung warten
-    listen(server_fd, 1); // max 1 wartender Client
+    listen(server_fd, 5); // max 1 wartender Client
     printf("Server gestartet. Warte auf Verbindung auf Port %d...\n", PORT);
 
     /*
@@ -62,9 +62,10 @@ void start_server() {
     start_multiclient_server(server_fd);
     close(server_fd);
 
-     /*
-     Wenn wir ohne Multiclient arbeiten:
-      */
+    /*
+    Wenn wir ohne Multiclient arbeiten:
+     */
+    /*
     // Client akzeptieren
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len); //
     if (client_fd < 0) {
@@ -156,9 +157,32 @@ void start_server() {
     close(server_fd);
 
 }
-
+*/
+}
 void start_multiclient_server(int server_fd) {
 
-    // Hier kommen accept(), fork(), Shared Memory etc. rein
+    printf("Multiclient-Server bereit...\n");
+
+    while (1) {
+        int client_fd = accept(server_fd, NULL, NULL);
+        // accept wartet auf eine neue eingehende Verbindung
+        // Fehlerbeheben:
+        if (client_fd < 0) continue;
+
+        printf("Client verbunden. FD: %d\n", client_fd);
+
+
+        // Fork, damit jeder Client in einem eigenen Prozess abgearbeitet wird
+        if (fork() == 0) { // exakte kopie des laufenden Prozess, wenn ==0 sind wir im Kindprozess
+            // im Kindprozess
+            close(server_fd);
+            handleClient(client_fd); // die Verarbeitung den Client, also put,get,del,quit..
+            close(client_fd);
+            exit(0);
+        }
+
+        close(client_fd); // Der Elternprozess braucht die Client Verbindung nicht, das macht der Kindprozess...
+
+    }
 }
 
