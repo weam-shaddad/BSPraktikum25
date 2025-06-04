@@ -1,9 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "sub.c"
+#include "sub.h"
+
+
+
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+
+#include "keyValStore.h"
 
 #define PORT 5678
 
@@ -15,5 +22,7 @@ int main() {
     }
 
     start_server(); // Ruft server_fd auf + startet Forks
+    closeStore();
+
     return 0;
 }

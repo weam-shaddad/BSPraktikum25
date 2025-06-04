@@ -17,6 +17,8 @@
 
 
 void start_server() {
+    setbuf(stdout, NULL); // Deaktiviert stdout-Pufferung
+
     printf("Server wurde hier gestartet...\n");
 
     int server_fd, client_fd;
@@ -27,9 +29,8 @@ void start_server() {
 
     socklen_t client_len = sizeof(client_addr);
 
-    // 1.  Anlegen eines Sockets / Socket erstellen
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    // Protokoll-Familie: AF_NET, Kommunikationstyp: SOCK_STREAM -> protocol-parameter ist dann 0
+
     if (server_fd < 0) {
         perror("socket");
         return;
@@ -52,128 +53,49 @@ void start_server() {
     }
 
     // Auf Verbindung warten
-    listen(server_fd, 5); // max 1 wartender Client
+    listen(server_fd, SOMAXCONN); // max 2 wartender Client
     printf("Server gestartet. Warte auf Verbindung auf Port %d...\n", PORT);
 
-    /*
-    Wenn wir mit Multiclient server arbeiten möchten:
-     */
+    printf(">> Starte jetzt start_multiclient_server()\n");
+
+    fflush(stdout);
 
     start_multiclient_server(server_fd);
-    close(server_fd);
 
-    /*
-    Wenn wir ohne Multiclient arbeiten:
-     */
-    /*
-    // Client akzeptieren
-    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len); //
-    if (client_fd < 0) {
-        perror("accept error");
-        return;
-    }
-    printf("Client verbunden.\n");
-
-    char line[BUFFER_SIZE];
-    int line_pos = 0;
-
-    while (1) {
-        int len = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-        if (len <= 0) {
-            printf("Verbindung getrennt. \n");
-            break;
-        }
-
-        for (int i = 0; i < len; i++) { // for loop damit wir
-            char ch = buffer[i];
-
-            if (ch == '\r') continue;  // Telnet schickt manchmal \r vor \n
-
-            if (ch == '\n') {
-                line[line_pos] = '\0';  // Null-terminieren
-                printf("Empfangen: %s\n", line);
-
-                // QUIT erkennen
-                if (strncmp(line, "QUIT", 4) == 0) {
-                    send(client_fd, "Verbindung wird beendet.\n", 26, 0);
-                    goto END;
-                }
-                char* command = strtok(line, " \n");
-                char* key     = strtok(NULL, " \n");
-                char* value   = strtok(NULL, " \n");
-
-                if (command == NULL || key == NULL) {
-                    send(client_fd, "Fehlerhafte Eingabe\n", 21, 0);
-
-                }
-                else if (strcmp(command, "PUT") == 0) { // put command
-                    if (value == NULL) {
-                        send(client_fd, "PUT braucht key + value\n", 25, 0);
-                    } else {
-                        put(key, value);
-                        char msg[256];
-                        snprintf(msg, sizeof(msg), "PUT:%s:%s\n", key, value);
-                        send(client_fd, msg, strlen(msg), 0); // key senden
-                    }
-
-                } else if (strcmp(command, "GET") == 0) { // get command
-                    char result[256];
-                    if (get(key, result) == 0) {
-                        char msg[256];
-                        snprintf(msg, sizeof(msg), "GET:%s:%s\n", key, result);
-                        send(client_fd, msg, strlen(msg), 0);
-                    } else {
-                        char msg[256];
-                        snprintf(msg, sizeof(msg), "GET:%s:key_nonexistent\n", key);
-                        send(client_fd, msg, strlen(msg), 0);
-                    }
-
-                } else if (strcmp(command, "DEL") == 0) {
-                    char msg[256];
-                    if (del(key) == 0) {
-                        snprintf(msg, sizeof(msg), "DEL:%s:key_deleted\n", key);
-                    } else {
-                        snprintf(msg, sizeof(msg), "DEL:%s:key_nonexistent\n", key);
-                    }
-                    send(client_fd, msg, strlen(msg), 0);
-                } else {
-                    send(client_fd, "Unbekannter Befehl\n", 20, 0);
-                }
-
-                // Zeile zurücksetzen
-                line_pos = 0;
-                memset(line, 0, sizeof(line));
-            } else {
-                if (line_pos < BUFFER_SIZE - 1) {
-                    line[line_pos++] = ch;
-                }
-            }
-        }
-    }
-
-    // 8. Verbindung schließen
-    END:
-    close(client_fd);
-    close(server_fd);
-
-}
-*/
 }
 void start_multiclient_server(int server_fd) {
 
     printf("Multiclient-Server bereit...\n");
+    fflush(stdout);
+
+    int client_count = 0;
 
     while (1) {
+        printf("Warte auf neuen Client... \n");
+        fflush(stdout);
+
         int client_fd = accept(server_fd, NULL, NULL);
+        printf(" accept() ausgeführt \n");
+
         // accept wartet auf eine neue eingehende Verbindung
         // Fehlerbeheben:
-        if (client_fd < 0) continue;
+        if (client_fd < 0) {
+            perror("accept fehlgeschlagen");
+            continue;
+        }
+        client_count++;
+        printf("Client %d verbunden. FD: %d\n", client_count, client_fd);
+        fflush(stdout);
 
-        printf("Client verbunden. FD: %d\n", client_fd);
+        pid_t pid = fork();
 
-
+        if (pid < 0) {
+            perror("fork");
+            close(client_fd);
+            continue;
+        }
         // Fork, damit jeder Client in einem eigenen Prozess abgearbeitet wird
-        if (fork() == 0) { // exakte kopie des laufenden Prozess, wenn ==0 sind wir im Kindprozess
+        if (pid == 0) { // exakte kopie des laufenden Prozess, wenn ==0 sind wir im Kindprozess
             // im Kindprozess
             close(server_fd);
             handleClient(client_fd); // die Verarbeitung den Client, also put,get,del,quit..
@@ -184,5 +106,110 @@ void start_multiclient_server(int server_fd) {
         close(client_fd); // Der Elternprozess braucht die Client Verbindung nicht, das macht der Kindprozess...
 
     }
+
 }
+
+void handleClient(int client_fd) {
+    char buffer[BUFFER_SIZE];
+
+    send(client_fd, "Verbunden. \n", 13, 0);
+
+    while (1) {
+
+        int len = recv(client_fd, buffer, BUFFER_SIZE - 1, 0);
+        memset(buffer, 0, BUFFER_SIZE);
+
+        /* wir wollen erstmal die Nachrichten vom Client lesen
+        die Daten vom Client sind über "client_fd" verbunden
+        sie sind dann im "buffer" gespeichert (buffer von typ char[])
+        -1 -> wir lassen 1 platz frei, 0 -> blockiert bis daten kommen
+        */
+
+        if (len <= 0) {// was passiert wenn keine Daten übermittelt sind? 0-> Verbindung beendet, <0 -> Fehler ist aufetreten
+            printf("Client getrennt/Fehler \n");
+            sleep(1);
+
+            break;
+    }
+
+        buffer[len] = '\0'; // Arrays in C brauchen \0 am ende
+        printf("Empfangen: %s\n", buffer);
+
+        // Befehle:
+    char *command = strtok(buffer, " \n"); // PUT;GET;DEL
+    char *key = strtok(NULL, " \n");
+    char *value = strtok(NULL, " \n");
+
+    if (command == NULL) {
+        send(client_fd, "Ungültiger Befehl\n", 18, 0);
+        continue;
+    }
+
+    // QUIT
+    if (strcmp(command, "QUIT") == 0) {
+        send(client_fd, "Verbindung wird beendet.\n", 26, 0);
+        break;
+    }
+
+    // PUT
+
+    if (strcmp(command, "PUT") == 0) {
+        if (key == NULL || value == NULL) {
+            send(client_fd, "PUT braucht key UND value\n", 28, 0);
+            continue;
+        }
+
+        put(key, value); // put funktion aufrufen, Wert überschrieben wenn nötig
+        // jetzt ist ein Puffer (zwischenspeicher) gebraucht
+        char response[256]; // hier wird die Antwort an den Client gespeichert
+        snprintf(response, sizeof(response), "PUT:%s:%s\n", key, value);
+        send(client_fd, response, strlen(response), 0); // ergebnis senden
+
+
+    // GET
+
+    } else if (strcmp(command, "GET") == 0) {
+        if (key == NULL) {
+            send(client_fd, "GET braucht einen key\n", 23, 0);
+            continue;
+        }
+
+        char result[256];
+
+        if (get(key, result) == 0) { //key existiert
+            char response[256];
+            snprintf(response, sizeof(response), "GET:%s:%s\n", key, result);
+            send(client_fd, response, strlen(response), 0);
+        }
+            else { // key existiert nicht
+            char response[256];
+            snprintf(response, sizeof(response), "GET:%s:key_nonexistent\n", key);
+            send(client_fd, response, strlen(response), 0);
+        }
+
+        // DELETE
+
+    } else if (strcmp(command, "DEL") == 0) {
+        if (key == NULL) { // kein Key gegeben
+            send(client_fd, "DEL braucht einen key\n", 23, 0);
+            continue;
+        }
+
+        char response[256];
+
+        if (del(key) == 0) {
+            snprintf(response, sizeof(response), "DEL:%s:key_deleted\n", key);
+        } else {
+            snprintf(response, sizeof(response), "DEL:%s:key_nonexistent\n", key);
+        }
+        send(client_fd, response, strlen(response), 0);
+
+    } else {
+        send(client_fd, "Unbekannter Befehl\n", 20, 0);
+    }
+}
+
+    close(client_fd);
+}
+
 
