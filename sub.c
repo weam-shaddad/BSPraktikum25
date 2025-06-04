@@ -53,7 +53,12 @@ void start_server() {
     }
 
     // Auf Verbindung warten
-    listen(server_fd, SOMAXCONN); // max 2 wartender Client
+    // listen(server_fd, SOMAXCONN); // max 2 wartender Client
+    if (listen(server_fd, SOMAXCONN) < 0) {
+        perror("listen failed");
+        return;
+    }
+
     printf("Server gestartet. Warte auf Verbindung auf Port %d...\n", PORT);
 
     printf(">> Starte jetzt start_multiclient_server()\n");
@@ -115,9 +120,9 @@ void handleClient(int client_fd) {
     send(client_fd, "Verbunden. \n", 13, 0);
 
     while (1) {
+        memset(buffer, 0, BUFFER_SIZE);
 
         int len = recv(client_fd, buffer, BUFFER_SIZE - 1, 0);
-        memset(buffer, 0, BUFFER_SIZE);
 
         /* wir wollen erstmal die Nachrichten vom Client lesen
         die Daten vom Client sind über "client_fd" verbunden
