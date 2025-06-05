@@ -1,6 +1,5 @@
 #include "keyValStore.h"
 
-#include <io.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,18 +61,6 @@ int initStore() {
 }
 
 
-
-/*  Hier ist die Aufgabe vor/ohen Multiclient:
-
-static KeyValue store[MAX_ENTRIES];
-
-int initStore() {
-    for (int i = 0; i < MAX_ENTRIES; i++) {
-        store[i].in_use = 0;
-    }
-    return 0;
-}
-
 int put(const char *key, const char *value) {
     for (int i = 0; i < MAX_ENTRIES; i++) {
         if (store[i].in_use && strcmp(store[i].key, key) == 0) {
@@ -120,4 +107,3 @@ int del(const char *key) {
 int closeStore() {
     return 0;
 }
-*/

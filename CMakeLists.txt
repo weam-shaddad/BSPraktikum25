@@ -3,5 +3,10 @@ project(PrakBS21 C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(PrakBS21 main.c keyValStore.c)
+add_executable(PrakBS21
+        main.c
+        sub.c
+        keyValStore.c
+)
+
 

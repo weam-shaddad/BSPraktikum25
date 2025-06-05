@@ -2,15 +2,14 @@
 // Created by weams on 07/05/2025.
 //
 #include <stdio.h>
-#include "sub.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>         // für close()
 #include <arpa/inet.h>      // für Strukturen von: inet_addr, htons, etc.
 #include <sys/socket.h>     // für Funktionen von: socket(), bind(), listen(), etc.
-
 #include "keyValStore.h"
+#include "sub.h"
 
 #define PORT 5678
 #define BUFFER_SIZE 1024
@@ -59,9 +58,10 @@ void start_server() {
         return;
     }
 
-    printf("Server gestartet. Warte auf Verbindung auf Port %d...\n", PORT);
+    // printf("Server gestartet. Warte auf Verbindung auf Port %d...\n", PORT);
 
     printf(">> Starte jetzt start_multiclient_server()\n");
+
 
     fflush(stdout);
 

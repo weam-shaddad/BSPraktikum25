@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "sub.c"
 #include "sub.h"
+#include "keyValStore.h"
 
 
 
@@ -10,7 +10,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include "keyValStore.h"
 
 #define PORT 5678
 
