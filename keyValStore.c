@@ -1,6 +1,4 @@
 #include "keyValStore.h"
-#include <string.h>
-#include <stdio.h>
 
 typedef struct {
     char key[MAX_KEY_LEN];

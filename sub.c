@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include "keyValStore.h"
+#include "sub.h"
 
 int main(void) {
     char result[256];

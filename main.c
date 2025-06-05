@@ -1,13 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <signal.h>
-#include "keyValStore.h"
-
-#define PORT 5678
-#define BUFFER_SIZE 1024
+#include "main.h"
 
 void handleClient(int client_fd) {
     char welcome_message[] = "Mit Server verbunden!\n";
