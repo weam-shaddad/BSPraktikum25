@@ -17,15 +17,7 @@ static KeyValue *store = NULL;
 static int shm_id;
 
 int initStore() {
-   /*
-     1. Identifizieren das Segment:
-        die funktion "shmget()" fordert ein stück von Shared Memory
 
-        id = smget(key, size, flag)
-        als "key": IPC_PRIVATE, damit ein neues Segment erzeugt wird
-        Size: 100–500, für mehrere Clients mit typischen Eingaben
-        flag: IPC_CREAT,  wenn es noch keinen Shared Memory Bereich mit dem Key gibt. wird stattdessen erstellet
-    */
 
      shm_id = shmget(IPC_PRIVATE, sizeof(KeyValue) * MAX_ENTRIES, IPC_CREAT | 0666);
      // bei Fehlschlag:
@@ -33,18 +25,6 @@ int initStore() {
         perror("shmget");
         return -1;
     }
-
-    /*
-      2. Attach:
-      die reserviertes Shared Memory Segment in den Adressraum des Prozesses einzuhängen
-      damit das Programm darauf zugreifen kann.
-
-      store = shmat ( id, addr, flag)
-      id= shm_id, also die Segment die wir schon erzeugt haben
-      addr= NULL - Das Betirebssystem entscheidet wo das Segment im Speicher platziert wird
-      flag: 0 -> normal Lese und Schreibzugriff
-      die Compiler sollte diese Speicherbereich wie ein Array von KeyValue behandeln und strukturieren
-     */
 
     store = (KeyValue *)shmat(shm_id, NULL, 0);
     // bei Fehlschalag wird "-1" als ungültiger Zeigerwert zurückgegeben
@@ -59,7 +39,6 @@ int initStore() {
     }
     return 0;
 }
-
 
 int put(const char *key, const char *value) {
     for (int i = 0; i < MAX_ENTRIES; i++) {
